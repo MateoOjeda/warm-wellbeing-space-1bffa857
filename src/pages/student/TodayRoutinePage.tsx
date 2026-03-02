@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { CalendarCheck, Dumbbell, Flame, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CalendarCheck, Dumbbell, Flame, Loader2, ClipboardEdit } from "lucide-react";
 import { toast } from "sonner";
+import DailyLogDialog from "@/components/student/DailyLogDialog";
 
 type DayOfWeek = "Domingo" | "Lunes" | "Martes" | "Miércoles" | "Jueves" | "Viernes" | "Sábado";
 
@@ -22,12 +24,14 @@ interface Exercise {
   weight: number;
   day: string;
   completed: boolean;
+  trainer_id: string;
 }
 
 export default function TodayRoutinePage() {
   const { user } = useAuth();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
+  const [logExercise, setLogExercise] = useState<Exercise | null>(null);
   const today = getTodayDay();
 
   const fetchExercises = useCallback(async () => {
@@ -35,7 +39,7 @@ export default function TodayRoutinePage() {
     setLoading(true);
     const { data } = await supabase
       .from("exercises")
-      .select("id, name, sets, reps, weight, day, completed")
+      .select("id, name, sets, reps, weight, day, completed, trainer_id")
       .eq("student_id", user.id)
       .eq("day", today);
     setExercises(data || []);
@@ -46,7 +50,6 @@ export default function TodayRoutinePage() {
     fetchExercises();
   }, [fetchExercises]);
 
-  // Realtime for exercise changes from trainer
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -120,17 +123,15 @@ export default function TodayRoutinePage() {
           {exercises.map((exercise) => (
             <Card
               key={exercise.id}
-              className={`card-glass transition-all duration-300 cursor-pointer ${
+              className={`card-glass transition-all duration-300 ${
                 exercise.completed ? "neon-border opacity-70" : "hover:neon-border"
               }`}
-              onClick={() => toggleComplete(exercise.id, exercise.completed)}
             >
               <CardContent className="p-4 flex items-center gap-4">
                 <Checkbox
                   checked={exercise.completed}
                   onCheckedChange={() => toggleComplete(exercise.id, exercise.completed)}
                   className="h-6 w-6 border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                  onClick={(e) => e.stopPropagation()}
                 />
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <Dumbbell className={`h-5 w-5 ${exercise.completed ? "text-primary" : "text-muted-foreground"}`} />
@@ -143,6 +144,15 @@ export default function TodayRoutinePage() {
                     {exercise.sets} series × {exercise.reps} reps — {exercise.weight > 0 ? `${exercise.weight} kg` : "Sin peso"}
                   </p>
                 </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                  onClick={() => setLogExercise(exercise)}
+                  title="Registrar desempeño"
+                >
+                  <ClipboardEdit className="h-4 w-4" />
+                </Button>
                 {exercise.completed && (
                   <Badge className="bg-primary/15 text-primary border-0 text-xs">Hecho</Badge>
                 )}
@@ -150,6 +160,16 @@ export default function TodayRoutinePage() {
             </Card>
           ))}
         </div>
+      )}
+
+      {logExercise && user && (
+        <DailyLogDialog
+          open={!!logExercise}
+          onClose={() => setLogExercise(null)}
+          exercise={logExercise}
+          studentId={user.id}
+          trainerId={logExercise.trainer_id}
+        />
       )}
     </div>
   );
