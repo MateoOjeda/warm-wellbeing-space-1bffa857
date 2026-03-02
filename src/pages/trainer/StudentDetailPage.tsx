@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Dumbbell, CheckCircle, Lock, Unlock, Apple, TrendingUp, User, Loader2, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PersonalDiagnosticTab from "@/components/trainer/PersonalDiagnosticTab";
+import ExerciseHistoryTab from "@/components/trainer/ExerciseHistoryTab";
 
 interface StudentProfile {
   display_name: string;
@@ -160,11 +161,14 @@ export default function StudentDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="plans" className="space-y-4">
-        <TabsList className="w-full grid grid-cols-3 bg-secondary/50">
-          <TabsTrigger value="plans">Planes</TabsTrigger>
-          <TabsTrigger value="routine">Rutina</TabsTrigger>
-          <TabsTrigger value="diagnostic" className="gap-1">
+      <Tabs defaultValue="history" className="space-y-4">
+        <TabsList className="w-full grid grid-cols-4 bg-secondary/50">
+          <TabsTrigger value="history" className="gap-1 text-xs">
+            📋 Historial
+          </TabsTrigger>
+          <TabsTrigger value="plans" className="text-xs">Planes</TabsTrigger>
+          <TabsTrigger value="routine" className="text-xs">Rutina</TabsTrigger>
+          <TabsTrigger value="diagnostic" className="gap-1 text-xs">
             <Sparkles className="h-3 w-3" /> Diagnóstico
           </TabsTrigger>
         </TabsList>
@@ -242,6 +246,10 @@ export default function StudentDetailPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="history">
+          {studentId && <ExerciseHistoryTab studentId={studentId} />}
         </TabsContent>
 
         <TabsContent value="diagnostic">

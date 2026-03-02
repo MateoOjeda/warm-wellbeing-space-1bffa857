@@ -32,6 +32,51 @@ export type Database = {
         }
         Relationships: []
       }
+      exercise_logs: {
+        Row: {
+          actual_reps: number | null
+          actual_sets: number | null
+          actual_weight: number | null
+          completed: boolean
+          created_at: string
+          exercise_id: string
+          id: string
+          log_date: string
+          notes: string
+          student_id: string
+          trainer_id: string
+          updated_at: string
+        }
+        Insert: {
+          actual_reps?: number | null
+          actual_sets?: number | null
+          actual_weight?: number | null
+          completed?: boolean
+          created_at?: string
+          exercise_id: string
+          id?: string
+          log_date?: string
+          notes?: string
+          student_id: string
+          trainer_id: string
+          updated_at?: string
+        }
+        Update: {
+          actual_reps?: number | null
+          actual_sets?: number | null
+          actual_weight?: number | null
+          completed?: boolean
+          created_at?: string
+          exercise_id?: string
+          id?: string
+          log_date?: string
+          notes?: string
+          student_id?: string
+          trainer_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           completed: boolean
