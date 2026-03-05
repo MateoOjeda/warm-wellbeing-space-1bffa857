@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      body_transformations: {
+        Row: {
+          after_date: string | null
+          after_photo_url: string | null
+          after_weight: number | null
+          before_date: string | null
+          before_photo_url: string | null
+          before_weight: number | null
+          created_at: string
+          id: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          after_date?: string | null
+          after_photo_url?: string | null
+          after_weight?: number | null
+          before_date?: string | null
+          before_photo_url?: string | null
+          before_weight?: number | null
+          created_at?: string
+          id?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          after_date?: string | null
+          after_photo_url?: string | null
+          after_weight?: number | null
+          before_date?: string | null
+          before_photo_url?: string | null
+          before_weight?: number | null
+          created_at?: string
+          id?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       change_readings: {
         Row: {
           id: string
@@ -79,6 +118,7 @@ export type Database = {
       }
       exercises: {
         Row: {
+          body_part: string
           completed: boolean
           created_at: string
           day: string
@@ -91,6 +131,7 @@ export type Database = {
           weight: number
         }
         Insert: {
+          body_part?: string
           completed?: boolean
           created_at?: string
           day: string
@@ -103,6 +144,7 @@ export type Database = {
           weight?: number
         }
         Update: {
+          body_part?: string
           completed?: boolean
           created_at?: string
           day?: string
@@ -113,6 +155,39 @@ export type Database = {
           student_id?: string
           trainer_id?: string
           weight?: number
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          read: boolean
+          related_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean
+          related_id?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean
+          related_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
         }
         Relationships: []
       }

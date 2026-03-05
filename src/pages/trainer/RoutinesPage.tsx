@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Dumbbell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { BODY_PARTS, EXERCISES_BY_BODY_PART, type BodyPart } from "@/lib/exercisesByBodyPart";
 
 const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
@@ -21,6 +22,7 @@ interface Exercise {
   weight: number;
   day: string;
   completed: boolean;
+  body_part: string;
 }
 
 export default function RoutinesPage() {
@@ -29,9 +31,8 @@ export default function RoutinesPage() {
   const [selectedStudent, setSelectedStudent] = useState("");
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loadingExercises, setLoadingExercises] = useState(false);
-  const [form, setForm] = useState({ name: "", sets: "", reps: "", weight: "", day: "" });
+  const [form, setForm] = useState({ name: "", sets: "", reps: "", day: "", bodyPart: "" });
 
-  // Auto-select first student
   useEffect(() => {
     if (students.length > 0 && !selectedStudent) {
       setSelectedStudent(students[0].user_id);
@@ -46,17 +47,19 @@ export default function RoutinesPage() {
       .select("*")
       .eq("trainer_id", user.id)
       .eq("student_id", selectedStudent);
-    setExercises(data || []);
+    setExercises((data as Exercise[]) || []);
     setLoadingExercises(false);
   }, [user, selectedStudent]);
 
-  useEffect(() => {
-    fetchExercises();
-  }, [fetchExercises]);
+  useEffect(() => { fetchExercises(); }, [fetchExercises]);
+
+  const availableExercises = form.bodyPart
+    ? EXERCISES_BY_BODY_PART[form.bodyPart as BodyPart] || []
+    : [];
 
   const handleAdd = async () => {
     if (!user || !selectedStudent) return;
-    if (!form.name || !form.sets || !form.reps || !form.day) {
+    if (!form.name || !form.sets || !form.reps || !form.day || !form.bodyPart) {
       toast.error("Completa todos los campos obligatorios");
       return;
     }
@@ -66,22 +69,22 @@ export default function RoutinesPage() {
       name: form.name,
       sets: parseInt(form.sets),
       reps: parseInt(form.reps),
-      weight: parseFloat(form.weight) || 0,
+      weight: 0,
       day: form.day,
-    }).select("id").single();
+      body_part: form.bodyPart,
+    } as any).select("id").single();
     if (error) {
       toast.error("Error al agregar ejercicio");
     } else {
-      // Log change for student feed
       await supabase.from("trainer_changes").insert({
         trainer_id: user.id,
         student_id: selectedStudent,
         change_type: "exercise_added",
-        description: `Nuevo ejercicio: ${form.name} (${form.sets}×${form.reps} - ${form.day})`,
+        description: `Nuevo ejercicio: ${form.name} (${form.sets}×${form.reps} - ${form.day} - ${form.bodyPart})`,
         entity_id: data?.id,
       });
       toast.success("Ejercicio agregado");
-      setForm({ name: "", sets: "", reps: "", weight: "", day: "" });
+      setForm({ name: "", sets: "", reps: "", day: "", bodyPart: "" });
       fetchExercises();
     }
   };
@@ -108,11 +111,7 @@ export default function RoutinesPage() {
   const student = students.find((s) => s.user_id === selectedStudent);
 
   if (loadingStudents) {
-    return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
+    return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
 
   if (students.length === 0) {
@@ -125,9 +124,7 @@ export default function RoutinesPage() {
         <Card className="card-glass">
           <CardContent className="p-8 text-center">
             <Dumbbell className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">
-              Primero vincula alumnos en la sección "Mis Alumnos" para poder asignarles rutinas.
-            </p>
+            <p className="text-sm text-muted-foreground">Primero vincula alumnos en la sección "Mis Alumnos".</p>
           </CardContent>
         </Card>
       </div>
@@ -138,7 +135,7 @@ export default function RoutinesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-display font-bold tracking-wide neon-text">Creador de Rutinas</h1>
-        <p className="text-muted-foreground text-sm mt-1">Asigna ejercicios a tus alumnos</p>
+        <p className="text-muted-foreground text-sm mt-1">Prescribe series y repeticiones — el alumno registra el peso</p>
       </div>
 
       <div className="max-w-xs">
@@ -166,15 +163,49 @@ export default function RoutinesPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Ejercicio</Label>
-              <Input
-                placeholder="Ej: Press Banca"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="bg-secondary/50 border-border"
-              />
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Día</Label>
+              <Select value={form.day} onValueChange={(v) => setForm({ ...form, day: v })}>
+                <SelectTrigger className="bg-secondary/50 border-border">
+                  <SelectValue placeholder="Seleccionar día" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DAYS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Parte del Cuerpo</Label>
+              <Select value={form.bodyPart} onValueChange={(v) => setForm({ ...form, bodyPart: v, name: "" })}>
+                <SelectTrigger className="bg-secondary/50 border-border">
+                  <SelectValue placeholder="Seleccionar grupo muscular" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BODY_PARTS.map((bp) => <SelectItem key={bp} value={bp}>{bp}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Ejercicio</Label>
+              {availableExercises.length > 0 ? (
+                <Select value={form.name} onValueChange={(v) => setForm({ ...form, name: v })}>
+                  <SelectTrigger className="bg-secondary/50 border-border">
+                    <SelectValue placeholder="Seleccionar ejercicio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableExercises.map((ex) => <SelectItem key={ex} value={ex}>{ex}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  placeholder="Primero selecciona el grupo muscular"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="bg-secondary/50 border-border"
+                  disabled={!form.bodyPart}
+                />
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs text-muted-foreground uppercase tracking-wide">Series</Label>
                 <Input type="number" placeholder="4" value={form.sets} onChange={(e) => setForm({ ...form, sets: e.target.value })} className="bg-secondary/50 border-border" />
@@ -183,23 +214,6 @@ export default function RoutinesPage() {
                 <Label className="text-xs text-muted-foreground uppercase tracking-wide">Reps</Label>
                 <Input type="number" placeholder="10" value={form.reps} onChange={(e) => setForm({ ...form, reps: e.target.value })} className="bg-secondary/50 border-border" />
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Peso (kg)</Label>
-                <Input type="number" placeholder="60" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} className="bg-secondary/50 border-border" />
-              </div>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Día</Label>
-              <Select value={form.day} onValueChange={(v) => setForm({ ...form, day: v })}>
-                <SelectTrigger className="bg-secondary/50 border-border">
-                  <SelectValue placeholder="Seleccionar día" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DAYS.map((d) => (
-                    <SelectItem key={d} value={d}>{d}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
             <Button onClick={handleAdd} className="w-full">
               <Plus className="h-4 w-4 mr-2" />
@@ -218,9 +232,7 @@ export default function RoutinesPage() {
           </CardHeader>
           <CardContent>
             {loadingExercises ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              </div>
+              <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
             ) : exercises.length === 0 ? (
               <p className="text-muted-foreground text-sm text-center py-8">Sin ejercicios asignados</p>
             ) : (
@@ -235,7 +247,10 @@ export default function RoutinesPage() {
                         <div key={ex.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 mb-1">
                           <div>
                             <p className="font-medium text-sm">{ex.name}</p>
-                            <p className="text-xs text-muted-foreground">{ex.sets}×{ex.reps} — {ex.weight}kg</p>
+                            <p className="text-xs text-muted-foreground">
+                              {ex.body_part && <span className="text-primary">{ex.body_part} · </span>}
+                              {ex.sets}×{ex.reps}
+                            </p>
                           </div>
                           <div className="flex items-center gap-2">
                             {ex.completed && <Badge className="bg-primary/20 text-primary text-[10px]">✓</Badge>}
