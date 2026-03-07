@@ -126,8 +126,8 @@ export default function TrackingPage() {
             </Card>
             <Card className="card-glass">
               <CardContent className="p-4 text-center">
-                <p className="text-3xl font-bold">{student?.weight || "—"}</p>
-                <p className="text-xs text-muted-foreground mt-1">Peso (kg)</p>
+                <p className="text-3xl font-bold">{student?.age || "—"}</p>
+                <p className="text-xs text-muted-foreground mt-1">Edad</p>
               </CardContent>
             </Card>
           </div>

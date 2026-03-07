@@ -17,6 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Search, UserPlus, X, Loader2, ChevronRight, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,6 +31,8 @@ interface LinkedStudent {
   linked_at: string;
   highestLevel: string;
   unlockedCount: number;
+  planType: string;
+  linkId: string;
 }
 
 interface SearchResult {
@@ -37,6 +40,8 @@ interface SearchResult {
   display_name: string;
   avatar_initials: string | null;
 }
+
+const PLAN_TYPE_OPTIONS = ["Estándar", "Personalizado", "Premium", "Grupal"];
 
 export default function StudentsPage() {
   const { user } = useAuth();
@@ -55,7 +60,7 @@ export default function StudentsPage() {
     if (!user) return;
     const { data: links } = await supabase
       .from("trainer_students")
-      .select("student_id, created_at")
+      .select("id, student_id, created_at, plan_type")
       .eq("trainer_id", user.id);
 
     if (!links || links.length === 0) {
@@ -82,12 +87,17 @@ export default function StudentsPage() {
       return "Sin desbloquear";
     };
 
-    const merged: LinkedStudent[] = profiles.map((p: any) => ({
-      ...p,
-      linked_at: links.find((l) => l.student_id === p.user_id)?.created_at || "",
-      highestLevel: getHighest(p.user_id),
-      unlockedCount: levels.filter((l) => l.student_id === p.user_id && l.unlocked).length,
-    }));
+    const merged: LinkedStudent[] = profiles.map((p: any) => {
+      const link = links.find((l) => l.student_id === p.user_id);
+      return {
+        ...p,
+        linked_at: link?.created_at || "",
+        highestLevel: getHighest(p.user_id),
+        unlockedCount: levels.filter((l) => l.student_id === p.user_id && l.unlocked).length,
+        planType: (link as any)?.plan_type || "Estándar",
+        linkId: link?.id || "",
+      };
+    });
 
     setLinkedStudents(merged);
     setLoading(false);
@@ -124,10 +134,18 @@ export default function StudentsPage() {
     setLinking(null);
   };
 
+  const updatePlanType = async (linkId: string, planType: string) => {
+    const { error } = await supabase.from("trainer_students").update({ plan_type: planType } as any).eq("id", linkId);
+    if (error) toast.error("Error al actualizar tipo de plan");
+    else {
+      setLinkedStudents((prev) => prev.map((s) => s.linkId === linkId ? { ...s, planType } : s));
+      toast.success("Tipo de plan actualizado");
+    }
+  };
+
   const confirmDeleteStudent = async () => {
     if (!user || !deleteTarget) return;
     setDeleting(true);
-    // Delete related data to maintain referential integrity
     const sid = deleteTarget.user_id;
     await Promise.all([
       supabase.from("exercise_logs").delete().eq("student_id", sid).eq("trainer_id", user.id),
@@ -236,23 +254,32 @@ export default function StudentsPage() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold truncate">{student.display_name}</h3>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">{student.highestLevel}</Badge>
-                    <span className="text-[10px] text-muted-foreground">{student.unlockedCount}/12 niveles</span>
+                    <Badge variant="outline" className="text-[10px] border-accent/40 text-accent">
+                      {student.planType}
+                    </Badge>
+                    <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
+                      {student.highestLevel}
+                    </Badge>
+                    <span className="text-[10px] text-muted-foreground">{student.unlockedCount}/12</span>
                   </div>
                 </div>
-                <div className="hidden sm:flex items-center gap-4 text-sm">
-                  {student.weight && (
-                    <div className="text-center">
-                      <p className="font-bold">{student.weight} kg</p>
-                      <p className="text-[10px] text-muted-foreground">Peso</p>
-                    </div>
-                  )}
-                  {student.age && (
-                    <div className="text-center">
-                      <p className="font-bold">{student.age}</p>
-                      <p className="text-[10px] text-muted-foreground">Edad</p>
-                    </div>
-                  )}
+                <div className="hidden sm:flex items-center gap-2">
+                  <Select
+                    value={student.planType}
+                    onValueChange={(v) => { updatePlanType(student.linkId, v); }}
+                  >
+                    <SelectTrigger
+                      className="h-7 text-[10px] w-28 bg-secondary/50"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PLAN_TYPE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex items-center gap-1">
                   <Button

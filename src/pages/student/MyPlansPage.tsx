@@ -3,8 +3,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Apple, Dumbbell, TrendingUp, User, Lock, Unlock, Loader2, ClipboardList } from "lucide-react";
+import { Apple, Dumbbell, TrendingUp, User, Lock, Unlock, Loader2, ClipboardList, Copy, MessageCircle, Check } from "lucide-react";
+import { toast } from "sonner";
 
 const PLAN_TYPES = [
   { key: "nutricion", label: "Nutrición", icon: Apple },
@@ -20,6 +22,12 @@ const LEVEL_LABELS: Record<string, string> = {
   avanzado: "Avanzado",
 };
 
+const LEVEL_PRICES: Record<string, number> = {
+  principiante: 15000,
+  intermedio: 25000,
+  avanzado: 40000,
+};
+
 interface PlanLevel {
   id: string;
   plan_type: string;
@@ -28,10 +36,18 @@ interface PlanLevel {
   unlocked: boolean;
 }
 
+interface TrainerInfo {
+  mercadopago_alias: string;
+  whatsapp_number: string;
+  display_name: string;
+}
+
 export default function MyPlansPage() {
   const { user } = useAuth();
   const [planLevels, setPlanLevels] = useState<PlanLevel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [trainerInfo, setTrainerInfo] = useState<TrainerInfo | null>(null);
+  const [copiedAlias, setCopiedAlias] = useState(false);
 
   const fetchPlanLevels = useCallback(async () => {
     if (!user) return;
@@ -41,6 +57,24 @@ export default function MyPlansPage() {
       .select("id, plan_type, level, content, unlocked")
       .eq("student_id", user.id);
     setPlanLevels(data || []);
+
+    // Fetch trainer info
+    const { data: links } = await supabase
+      .from("trainer_students")
+      .select("trainer_id")
+      .eq("student_id", user.id)
+      .limit(1);
+
+    if (links && links.length > 0) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("display_name, mercadopago_alias, whatsapp_number")
+        .eq("user_id", links[0].trainer_id)
+        .single();
+      if (profile) {
+        setTrainerInfo(profile as any);
+      }
+    }
     setLoading(false);
   }, [user]);
 
@@ -48,7 +82,6 @@ export default function MyPlansPage() {
     fetchPlanLevels();
   }, [fetchPlanLevels]);
 
-  // Realtime for plan level changes
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -61,6 +94,26 @@ export default function MyPlansPage() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user, fetchPlanLevels]);
+
+  const copyAlias = async () => {
+    if (!trainerInfo?.mercadopago_alias) return;
+    try {
+      await navigator.clipboard.writeText(trainerInfo.mercadopago_alias);
+      setCopiedAlias(true);
+      toast.success("¡Alias copiado al portapapeles!");
+      setTimeout(() => setCopiedAlias(false), 2000);
+    } catch {
+      toast.error("No se pudo copiar");
+    }
+  };
+
+  const openWhatsApp = (planLabel: string, levelLabel: string) => {
+    const phone = trainerInfo?.whatsapp_number || "";
+    const message = encodeURIComponent(
+      `Hola, acabo de realizar el pago del plan ${planLabel} - ${levelLabel}. Aquí te adjunto el comprobante.`
+    );
+    window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
+  };
 
   if (loading) {
     return (
@@ -88,6 +141,10 @@ export default function MyPlansPage() {
       </div>
     );
   }
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(price);
+  };
 
   return (
     <div className="space-y-6">
@@ -130,6 +187,8 @@ export default function MyPlansPage() {
               const pl = planLevels.find((p) => p.plan_type === pt.key && p.level === level);
               if (!pl) return null;
 
+              const price = LEVEL_PRICES[level] || 0;
+
               return (
                 <Card
                   key={pl.id}
@@ -148,8 +207,11 @@ export default function MyPlansPage() {
                           <Lock className="h-4 w-4 text-muted-foreground" />
                         )}
                       </div>
-                      <div>
-                        <CardTitle className="text-sm">{LEVEL_LABELS[level]}</CardTitle>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-sm">{LEVEL_LABELS[level]}</CardTitle>
+                          <span className="text-xs font-bold text-accent">{formatPrice(price)}</span>
+                        </div>
                         <Badge
                           variant="outline"
                           className={`text-[10px] ${
@@ -163,7 +225,7 @@ export default function MyPlansPage() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-3">
                     {pl.unlocked ? (
                       pl.content ? (
                         <div className="text-sm whitespace-pre-wrap leading-relaxed">
@@ -175,9 +237,38 @@ export default function MyPlansPage() {
                         </p>
                       )
                     ) : (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Lock className="h-4 w-4" />
-                        Nivel bloqueado por tu entrenador
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Lock className="h-4 w-4" />
+                          Nivel bloqueado por tu entrenador
+                        </div>
+                        {/* Payment actions */}
+                        {trainerInfo && (trainerInfo.mercadopago_alias || trainerInfo.whatsapp_number) && (
+                          <div className="flex gap-2 flex-wrap">
+                            {trainerInfo.mercadopago_alias && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-2 text-xs"
+                                onClick={(e) => { e.stopPropagation(); copyAlias(); }}
+                              >
+                                {copiedAlias ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
+                                {copiedAlias ? "¡Copiado!" : "Copiar Alias MP"}
+                              </Button>
+                            )}
+                            {trainerInfo.whatsapp_number && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-2 text-xs"
+                                onClick={(e) => { e.stopPropagation(); openWhatsApp(pt.label, LEVEL_LABELS[level]); }}
+                              >
+                                <MessageCircle className="h-3 w-3" />
+                                Enviar comprobante
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </CardContent>

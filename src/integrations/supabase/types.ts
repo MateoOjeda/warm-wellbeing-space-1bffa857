@@ -238,6 +238,7 @@ export type Database = {
           icon: string | null
           id: string
           name: string
+          price: number | null
           student_id: string
         }
         Insert: {
@@ -247,6 +248,7 @@ export type Database = {
           icon?: string | null
           id?: string
           name: string
+          price?: number | null
           student_id: string
         }
         Update: {
@@ -256,6 +258,7 @@ export type Database = {
           icon?: string | null
           id?: string
           name?: string
+          price?: number | null
           student_id?: string
         }
         Relationships: []
@@ -268,9 +271,11 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          mercadopago_alias: string | null
           updated_at: string
           user_id: string
           weight: number | null
+          whatsapp_number: string | null
         }
         Insert: {
           age?: number | null
@@ -279,9 +284,11 @@ export type Database = {
           created_at?: string
           display_name: string
           id?: string
+          mercadopago_alias?: string | null
           updated_at?: string
           user_id: string
           weight?: number | null
+          whatsapp_number?: string | null
         }
         Update: {
           age?: number | null
@@ -290,9 +297,11 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          mercadopago_alias?: string | null
           updated_at?: string
           user_id?: string
           weight?: number | null
+          whatsapp_number?: string | null
         }
         Relationships: []
       }
@@ -396,18 +405,21 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          plan_type: string | null
           student_id: string
           trainer_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          plan_type?: string | null
           student_id: string
           trainer_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          plan_type?: string | null
           student_id?: string
           trainer_id?: string
         }
