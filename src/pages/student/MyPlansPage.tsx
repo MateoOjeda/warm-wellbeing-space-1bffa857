@@ -48,8 +48,8 @@ export default function MyPlansPage() {
         .from("profiles")
         .select("display_name, mercadopago_alias, whatsapp_number")
         .eq("user_id", links[0].trainer_id)
-        .maybeSingle();
-      if (profile) setTrainerInfo(profile as TrainerInfo);
+        .single();
+      if (profile) setTrainerInfo(profile as any);
     }
     setLoading(false);
   }, [user]);

@@ -5,8 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Settings, Save, Loader2, UserPlus, ShieldCheck } from "lucide-react";
+import { Settings, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function TrainerSettingsDialog() {
@@ -15,11 +14,6 @@ export default function TrainerSettingsDialog() {
   const [mercadopagoAlias, setMercadopagoAlias] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [saving, setSaving] = useState(false);
-
-  // Promote trainer state
-  const [promoteEmail, setPromoteEmail] = useState("");
-  const [promoteCode, setPromoteCode] = useState("");
-  const [promoting, setPromoting] = useState(false);
 
   useEffect(() => {
     if (!user || !open) return;
@@ -50,32 +44,8 @@ export default function TrainerSettingsDialog() {
     if (error) toast.error("Error al guardar");
     else {
       toast.success("Configuración guardada");
+      setOpen(false);
     }
-  };
-
-  const handlePromote = async () => {
-    if (!promoteEmail.trim() || !promoteCode.trim()) {
-      toast.error("Completa el email y el código de seguridad");
-      return;
-    }
-    setPromoting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("promote-trainer", {
-        body: { email: promoteEmail.trim(), code: promoteCode.trim() },
-      });
-      if (error) {
-        toast.error("Error al procesar la solicitud");
-      } else if (data?.error) {
-        toast.error(data.error);
-      } else {
-        toast.success(data?.message || "Usuario promovido a entrenador");
-        setPromoteEmail("");
-        setPromoteCode("");
-      }
-    } catch {
-      toast.error("Error de conexión");
-    }
-    setPromoting(false);
   };
 
   return (
@@ -87,10 +57,9 @@ export default function TrainerSettingsDialog() {
       </DialogTrigger>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Configuración</DialogTitle>
+          <DialogTitle>Configuración de Cobro</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
-          {/* Payment settings */}
           <div className="space-y-2">
             <Label className="text-sm">Alias de Mercado Pago</Label>
             <Input
@@ -109,39 +78,12 @@ export default function TrainerSettingsDialog() {
               onChange={(e) => setWhatsappNumber(e.target.value)}
               maxLength={20}
             />
-            <p className="text-[11px] text-muted-foreground">Con código de país, sin + ni espacios.</p>
+            <p className="text-[11px] text-muted-foreground">Con código de país, sin + ni espacios. Se usará para el botón de comprobante.</p>
           </div>
           <Button onClick={handleSave} disabled={saving} className="w-full gap-2">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Guardar configuración
+            Guardar
           </Button>
-
-          <Separator />
-
-          {/* Promote trainer */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-primary" />
-              <Label className="text-sm font-semibold">Habilitar Entrenador</Label>
-            </div>
-            <p className="text-[11px] text-muted-foreground">Promueve a un usuario registrado al rol de entrenador ingresando su email y el código de seguridad.</p>
-            <Input
-              placeholder="Email del usuario"
-              type="email"
-              value={promoteEmail}
-              onChange={(e) => setPromoteEmail(e.target.value)}
-            />
-            <Input
-              placeholder="Código de seguridad"
-              type="password"
-              value={promoteCode}
-              onChange={(e) => setPromoteCode(e.target.value)}
-            />
-            <Button onClick={handlePromote} disabled={promoting} variant="outline" className="w-full gap-2">
-              {promoting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-              Habilitar como entrenador
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
